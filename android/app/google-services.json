@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "822468391412",
+    "project_id": "ai-voice-news-d4758",
+    "storage_bucket": "ai-voice-news-d4758.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:822468391412:android:26c8d6e85cd4042f3149a1",
+        "android_client_info": {
+          "package_name": "com.example.ai_voice_flutter_frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5sviMIHzsR2DzIrUalpri6vTH7tSDKvU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

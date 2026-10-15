@@ -6,9 +6,18 @@ gradle-wrapper.jar
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Firebase configuration containing project identifiers and API keys
+android/app/google-services.json
 
 # Remember to never publicly share your keystore.
+# Local signing credentials
 # See https://flutter.dev/to/reference-keystore
 key.properties
 **/*.keystore
 **/*.jks
+app/google-services.json

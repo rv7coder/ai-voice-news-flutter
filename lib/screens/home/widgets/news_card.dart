@@ -4,6 +4,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../../news/news_details_screen.dart';
 import '../../../services/bookmark_service.dart';
 import 'package:provider/provider.dart';
+import '../../../providers/audio_provider.dart';
 import '../../../providers/bookmark_provider.dart';
 
 class NewsCard extends StatelessWidget {
@@ -105,6 +106,8 @@ Color getCategoryColor() {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Card(
       elevation: 4,
       margin: const EdgeInsets.symmetric(
@@ -147,8 +150,8 @@ Color getCategoryColor() {
                     const Spacer(),
                     Text(
                       article.source,
-                      style: const TextStyle(
-                        color: Colors.grey,
+                      style: textTheme.labelMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -158,19 +161,22 @@ Color getCategoryColor() {
                 /// TITLE
                 Text(
                   article.title,
-                  style: const TextStyle(
+                  style: textTheme.titleMedium?.copyWith(
                     fontSize: 19,
                     fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 10),
                 /// DESCRIPTION
                 Text(
-                  article.description,
-                  style: const TextStyle(
+                  article.description.isEmpty
+                      ? "No description available for this article."
+                      : article.description,
+                  style: textTheme.bodyMedium?.copyWith(
                     fontSize: 15,
-                    color: Colors.black87,
                     height: 1.5,
+                    color: colors.onSurface.withValues(alpha: 0.85),
                   ),
                   maxLines: 4,
                   overflow: TextOverflow.ellipsis,
@@ -202,12 +208,54 @@ Color getCategoryColor() {
                   mainAxisAlignment:
                       MainAxisAlignment.spaceAround,
                   children: [
-                    TextButton.icon(
-                      onPressed: onListen,
-                      icon: const Icon(
-                        Icons.volume_up_outlined,
-                      ),
-                      label: const Text("Listen..."),
+                    Consumer<AudioProvider>(
+                      builder: (context, audioProvider, child) {
+                        final isCurrent = audioProvider.isCurrentArticle(
+                          article.url,
+                        );
+                        final isBusy = audioProvider.isLoading && isCurrent;
+                        return TextButton.icon(
+                          onPressed: audioProvider.isLoading
+                              ? null
+                              : () async {
+                                  if (onListen != null) {
+                                    onListen!();
+                                    return;
+                                  }
+                                  final success =
+                                      await audioProvider.playArticleSummary(
+                                    articleKey: article.url,
+                                    title: article.title,
+                                    description: article.description,
+                                    field: article.field,
+                                  );
+                                  if (!context.mounted) return;
+                                  if (!success) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Unable to generate voice summary.",
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                          icon: Icon(
+                            isBusy
+                                ? Icons.hourglass_top
+                                : isCurrent && audioProvider.isPlaying
+                                    ? Icons.pause
+                                    : Icons.volume_up_outlined,
+                          ),
+                          label: Text(
+                            isBusy
+                                ? "Loading..."
+                                : isCurrent && audioProvider.isPlaying
+                                    ? "Pause"
+                                    : "Listen...",
+                          ),
+                        );
+                      },
                     ),
                     TextButton.icon(
                       onPressed: () async {

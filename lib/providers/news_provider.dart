@@ -39,7 +39,7 @@ class NewsProvider extends BaseProvider {
     }
   }
 
-  Future<void> loadBothNews() async {
+  Future<void> loadBothNews({bool showLocal = false}) async {
     setLoading(true);
     setError(null);
     try {
@@ -49,7 +49,7 @@ class NewsProvider extends BaseProvider {
       ]);
       globalNews = results[0];
       locationNews = results[1];
-      news = globalNews;
+      news = showLocal ? locationNews : globalNews;
     } catch (e) {
       setError(e.toString());
     } finally {
@@ -79,13 +79,20 @@ class NewsProvider extends BaseProvider {
     notifyListeners();
   }
 
-  Future<void> changeCategory(String field) async {
+  Future<void> changeCategory(
+    String field, {
+    bool showLocal = false,
+  }) async {
     setLoading(true);
     setError(null);
     try {
-      final results = await _service.changeCategory(field);
-      globalNews = results;
-      news = results;
+      final results = await Future.wait([
+        _service.getNewsByCategory(field: field, local: false),
+        _service.getNewsByCategory(field: field, local: true),
+      ]);
+      globalNews = results[0];
+      locationNews = results[1];
+      news = showLocal ? locationNews : globalNews;
     } catch (e) {
       setError(e.toString());
     } finally {

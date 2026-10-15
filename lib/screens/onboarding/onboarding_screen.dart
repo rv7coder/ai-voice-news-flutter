@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/onboarding_data.dart';
 import '../../providers/onboarding_provider.dart';
+import '../../services/auth_service.dart';
 import 'widgets/onboarding_page.dart';
 import 'category_selection_screen.dart';
 
@@ -15,6 +17,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   final TextEditingController _nameController = TextEditingController();
   int currentPage = 0;
+  bool _isSigningIn = false;
 
   bool get isLastPage => currentPage == onboardingPages.length - 1;
 
@@ -38,18 +41,52 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     context.read<OnboardingProvider>().setUserName(name);
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => const CategorySelectionScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const CategorySelectionScreen()),
     );
   }
 
   void _showNameRequiredMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Please enter your name...."),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Please enter your name....")));
+  }
+
+  Future<void> _signInWithGoogle() async {
+    if (_isSigningIn) return;
+    setState(() {
+      _isSigningIn = true;
+    });
+    try {
+      final user = await AuthService().signInWithGoogle();
+      if (!mounted) return;
+      if (user == null) return;
+
+      final name = user.displayName?.trim();
+      if (name != null && name.isNotEmpty) {
+        _nameController.text = name;
+        await context.read<OnboardingProvider>().setUserName(name);
+        if (!mounted) return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Google sign-in successful.")),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? "Google sign-in failed.")),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Google sign-in failed.")));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSigningIn = false;
+        });
+      }
+    }
   }
 
   void nextPage() {
@@ -95,9 +132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   });
                 },
                 itemBuilder: (_, index) {
-                  return OnboardingPage(
-                    page: onboardingPages[index],
-                  );
+                  return OnboardingPage(page: onboardingPages[index]);
                 },
               ),
             ),
@@ -114,6 +149,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                  ),
+                ),
+              ),
+            if (isLastPage)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                child: OutlinedButton.icon(
+                  onPressed: _isSigningIn ? null : _signInWithGoogle,
+                  icon: _isSigningIn
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.login),
+                  label: Text(
+                    _isSigningIn ? "Signing in..." : "Continue with Google",
                   ),
                 ),
               ),
@@ -136,9 +188,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     children: List.generate(
                       onboardingPages.length,
                       (index) => Container(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
                         width: currentPage == index ? 20 : 8,
                         height: 8,
                         decoration: BoxDecoration(
@@ -152,9 +202,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   ElevatedButton(
                     onPressed: nextPage,
-                    child: Text(
-                      isLastPage ? "Continue" : "Next",
-                    ),
+                    child: Text(isLastPage ? "Continue" : "Next"),
                   ),
                 ],
               ),

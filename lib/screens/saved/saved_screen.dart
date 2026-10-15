@@ -70,7 +70,6 @@ class _SavedScreenState extends State<SavedScreen> {
                   provider.bookmarks[index];
               return NewsCard(
                 article: article,
-                onListen: () {},
                 isSavedScreen: true,
               );
             },

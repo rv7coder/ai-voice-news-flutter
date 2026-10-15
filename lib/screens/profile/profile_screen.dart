@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../screens/saved/saved_screen.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/bookmark_provider.dart';
+import '../../services/auth_service.dart';
+import '../../core/routes/app_routes.dart';
 import '../settings/settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -23,48 +25,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<OnboardingProvider>();
-    final locationParts = [
-      provider.city,
-      provider.state,
-      provider.country,
-    ].where((value) => value != null && value.trim().isNotEmpty).map((value) => value!.trim()).toList();
+    final locationParts = [provider.city, provider.state, provider.country]
+        .where((value) => value != null && value.trim().isNotEmpty)
+        .map((value) => value!.trim())
+        .toList();
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Profile"),
-      ),
+      appBar: AppBar(title: const Text("Profile")),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          const CircleAvatar(
-            radius: 45,
-            child: Icon(
-              Icons.person,
-              size: 50,
-            ),
-          ),
+          const CircleAvatar(radius: 45, child: Icon(Icons.person, size: 50)),
           const SizedBox(height: 16),
           Center(
             child: Text(
               provider.userName?.trim().isNotEmpty == true
                   ? provider.userName!
                   : "Guest User",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 6),
-          if (provider.userId != null)
-            Center(
-              child: Text(
-                "User account",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
           const SizedBox(height: 30),
           Card(
             child: ListTile(
@@ -103,15 +83,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   return Text("$count Articles Saved");
                 },
               ),
-              trailing: const Icon(
-                Icons.arrow_forward_ios,
-              ),
+              trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const SavedScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const SavedScreen()),
                 );
               },
             ),
@@ -121,23 +97,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: ListTile(
               leading: const Icon(Icons.settings),
               title: const Text("Settings"),
-              trailing: const Icon(
-                Icons.arrow_forward_ios,
-              ),
+              trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const SettingsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 );
               },
             ),
           ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
-            onPressed: () {
-              // Logout will be implemented in the authentication phase.
+            onPressed: () async {
+              await AuthService().signOut();
+              if (!context.mounted) return;
+              await context.read<OnboardingProvider>().clear();
+              if (!context.mounted) return;
+              Navigator.of(
+                context,
+              ).pushNamedAndRemoveUntil(AppRoutes.splash, (route) => false);
             },
             icon: const Icon(Icons.logout),
             label: const Text("Logout"),

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/voice_service.dart';
 
 class AudioProvider extends ChangeNotifier {
   final AudioPlayer _player = AudioPlayer();
@@ -37,6 +38,46 @@ class AudioProvider extends ChangeNotifier {
     return _currentArticleKey == articleKey;
   }
 
+  Future<bool> playArticleSummary({
+    required String articleKey,
+    required String title,
+    required String description,
+    required String field,
+  }) async {
+    if (isPlaying && isCurrentArticle(articleKey)) {
+      await pauseAudio();
+      return true;
+    }
+    if (!isPlaying && hasAudioLoaded && isCurrentArticle(articleKey)) {
+      await resumeAudio();
+      return true;
+    }
+    try {
+      isLoading = true;
+      currentTitle = title;
+      notifyListeners();
+      final audioUrl = await VoiceService().getVoiceSummary(
+        title: title,
+        description: description,
+        field: field,
+      );
+      if (audioUrl == null || audioUrl.isEmpty) {
+        currentTitle = null;
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      await playAudio(articleKey: articleKey, audioUrl: audioUrl, title: title);
+      return true;
+    } catch (e) {
+      debugPrint("Voice summary error: $e");
+      isPlaying = false;
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> playAudio({
     required String articleKey,
     required String audioUrl,
@@ -47,8 +88,7 @@ class AudioProvider extends ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       playbackSpeed = prefs.getDouble("playbackSpeed") ?? 1.0;
-      if (_currentArticleKey != articleKey ||
-          _currentAudioUrl != audioUrl) {
+      if (_currentArticleKey != articleKey || _currentAudioUrl != audioUrl) {
         await _player.setUrl(audioUrl);
         _currentArticleKey = articleKey;
         _currentAudioUrl = audioUrl;
@@ -59,6 +99,8 @@ class AudioProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Audio playback error: $e");
       isPlaying = false;
+      _currentAudioUrl = null;
+      _currentArticleKey = null;
     } finally {
       isLoading = false;
       notifyListeners();

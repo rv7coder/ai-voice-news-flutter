@@ -216,7 +216,6 @@ class _SearchScreenState extends State<SearchScreen> {
                       final article = provider.searchResults[index];
                       return NewsCard(
                         article: article,
-                        onListen: () {},
                       );
                     },
                   );

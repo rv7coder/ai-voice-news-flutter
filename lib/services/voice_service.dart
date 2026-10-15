@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 
@@ -13,27 +14,23 @@ class VoiceService {
     if (userId == null || userId.isEmpty) {
       return null;
     }
-    final response = await ApiService.post(
-      "/voice-summary",
-      {
-        "user_id": userId,
-        "title": title,
-        "description": description,
-        "field": field,
-      },
-    );
+    final summaryText = description.trim().isEmpty ? title : description;
+    final response = await ApiService.post("/voice-summary", {
+      "user_id": userId,
+      "title": title,
+      "description": summaryText,
+      "field": field,
+    });
     if (response.statusCode != 200) {
-      print("Voice summary error: ${response.statusCode}");
-      print(response.body);
+      debugPrint("Voice summary error: ${response.statusCode}");
+      debugPrint(response.body);
       return null;
     }
-    final data = jsonDecode(response.body);
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
     final audioUrl = data["audio_url"];
     if (audioUrl == null || audioUrl.toString().isEmpty) {
       return null;
     }
-    return ApiService.getMediaUrl(
-      audioUrl.toString(),
-    );
+    return ApiService.getMediaUrl(audioUrl.toString());
   }
 }

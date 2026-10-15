@@ -132,37 +132,35 @@ class NewsService {
         .toList();
   }
 
-  Future<List<NewsModel>> changeCategory(
-    String field,
-  ) async {
+  Future<List<NewsModel>> getNewsByCategory({
+    required String field,
+    required bool local,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("user_id");
     if (userId == null || userId.isEmpty) {
       throw Exception("User ID not found.");
     }
-    final response = await ApiService.put(
-      "/user-preference/$userId",
-      {
-        "field": field,
-      },
-    );
+    final encodedField = Uri.encodeQueryComponent(field);
+    final endpoint = local
+        ? "/location-news/$userId?field=$encodedField"
+        : "/recommended-news/$userId?field=$encodedField";
+    final response = await ApiService.get(endpoint);
     if (response.statusCode != 200) {
       throw Exception(
-        "Failed to change category (${response.statusCode})",
+        "Failed to load news (${response.statusCode})",
       );
     }
-    final newsResponse = await ApiService.get(
-      "/recommended-news/$userId",
-    );
-    if (newsResponse.statusCode != 200) {
-      throw Exception(
-        "Failed to load news (${newsResponse.statusCode})",
-      );
-    }
-    final data = jsonDecode(newsResponse.body);
+    final data = jsonDecode(response.body);
     final articles = data["articles"] as List? ?? [];
     return articles
         .map((e) => NewsModel.fromJson(e))
         .toList();
+  }
+
+  Future<List<NewsModel>> changeCategory(
+    String field,
+  ) async {
+    return getNewsByCategory(field: field, local: false);
   }
 }

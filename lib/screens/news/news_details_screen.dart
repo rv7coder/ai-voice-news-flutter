@@ -4,7 +4,6 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../../models/news_model.dart';
 import '../../providers/audio_provider.dart';
 import '../../providers/bookmark_provider.dart';
-import '../../services/voice_service.dart';
 import '../../services/url_launcher_service.dart';
 import '../../services/share_service.dart';
 
@@ -40,9 +39,9 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
       isSaving = true;
     });
     final bookmarkProvider = context.read<BookmarkProvider>();
-    final existingBookmark = bookmarkProvider.bookmarks.where(
-      (item) => item.url == article.url,
-    ).toList();
+    final existingBookmark = bookmarkProvider.bookmarks
+        .where((item) => item.url == article.url)
+        .toList();
     bool success;
     if (existingBookmark.isNotEmpty) {
       success = await bookmarkProvider.deleteBookmark(
@@ -68,8 +67,8 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
         content: Text(
           success
               ? existingBookmark.isNotEmpty
-                  ? "Article removed from saved articles."
-                  : "Article saved successfully."
+                    ? "Article removed from saved articles."
+                    : "Article saved successfully."
               : "Unable to update saved article.",
         ),
       ),
@@ -79,41 +78,24 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
   Future<void> listenToArticle() async {
     final audioProvider = context.read<AudioProvider>();
     if (audioProvider.isLoading) return;
-    final articleKey = article.url;
-    if (audioProvider.isPlaying &&
-        audioProvider.isCurrentArticle(articleKey)) {
-      await audioProvider.pauseAudio();
-      return;
-    }
-    if (!audioProvider.isPlaying &&
-        audioProvider.hasAudioLoaded &&
-        audioProvider.isCurrentArticle(articleKey)) {
-      await audioProvider.resumeAudio();
-      return;
-    }
-    final audioUrl = await VoiceService().getVoiceSummary(
+    final success = await audioProvider.playArticleSummary(
+      articleKey: article.url,
       title: article.title,
       description: article.description,
       field: article.field,
     );
     if (!mounted) return;
-    if (audioUrl == null) {
+    if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Unable to generate voice summary."),
-        ),
+        const SnackBar(content: Text("Unable to generate voice summary.")),
       );
-      return;
     }
-    await audioProvider.playAudio(
-      articleKey: articleKey,
-      audioUrl: audioUrl,
-      title: article.title,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -128,11 +110,7 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
                   );
                   return IconButton(
                     onPressed: isSaving ? null : toggleBookmark,
-                    icon: Icon(
-                      saved
-                          ? Icons.bookmark
-                          : Icons.bookmark_border,
-                    ),
+                    icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border),
                   );
                 },
               ),
@@ -155,19 +133,13 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
                       errorBuilder: (_, _, _) {
                         return Container(
                           color: Colors.grey.shade300,
-                          child: const Icon(
-                            Icons.article,
-                            size: 80,
-                          ),
+                          child: const Icon(Icons.article, size: 80),
                         );
                       },
                     )
                   : Container(
                       color: Colors.grey.shade300,
-                      child: const Icon(
-                        Icons.article,
-                        size: 80,
-                      ),
+                      child: const Icon(Icons.article, size: 80),
                     ),
             ),
           ),
@@ -179,17 +151,13 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
                 children: [
                   Row(
                     children: [
-                      Chip(
-                        label: Text(article.field),
-                      ),
+                      Chip(label: Text(article.field)),
                       const Spacer(),
                       Flexible(
                         child: Text(
                           article.source,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                          ),
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ),
                     ],
@@ -197,9 +165,7 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
                   const SizedBox(height: 8),
                   Text(
                     getTimeAgo(),
-                    style: const TextStyle(
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -212,9 +178,10 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
                   const SizedBox(height: 20),
                   Text(
                     article.description,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       height: 1.7,
+                      color: colors.onSurface,
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -237,8 +204,7 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
                                     )
                                   : Icon(
                                       audioProvider.isPlaying &&
-                                              audioProvider
-                                                  .isCurrentArticle(
+                                              audioProvider.isCurrentArticle(
                                                 article.url,
                                               )
                                           ? Icons.pause
@@ -299,17 +265,14 @@ class _NewsDetailsScreenState extends State<NewsDetailsScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final success =
-                            await UrlLauncherService.openArticle(
+                        final success = await UrlLauncherService.openArticle(
                           article.url,
                         );
                         if (!context.mounted) return;
                         if (!success) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text(
-                                "Unable to open article.",
-                              ),
+                              content: Text("Unable to open article."),
                             ),
                           );
                         }
